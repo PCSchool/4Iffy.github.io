@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="initial-scale=1.0, width=device-width" />    
+    <title>Interactive Map</title>
+	<script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+	<script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/d3/4.5.0/d3.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+	<script src="https://unpkg.com/d3-simple-slider/build/d3-simple-slider.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Abril+Fatface|Yanone+Kaffeesatz:200" rel="stylesheet">
+    <style>
+      body {
+        margin: 0;
+        background-color: #111;  /*#2A2C39; */
+		color: #f1f1f1;
+        font-family: 'Yanone Kaffeesatz', sans-serif;
+        font-weight: 200;
+        font-size: 17px;
+      } 
+	  
+      #map-holder {
+        width: 100vw;
+        height: 85vh;  
+      }
+      svg rect {
+        fill: #2A2C39;   /* map background colour */
+      }
+      .country{
+        stroke: #2A2C39; /* country border colour */
+        stroke-width: 1; /* country border width */
+      }
+      .country-on{
+        fill: #4B5358;   /* highlight colour for selected country */
+      }
+      .countryLabel{
+        display: none;   /* hide all country labels by default */
+      }
+	  
+	  #down h1{
+		align: center;
+		font-size: 36px;
+	  }
+	  
+	  #down {
+		margin: auto;
+		color: #f1f1f1;
+		background-color: #111;
+		padding-top: 20px;
+	  }
+	  
+	  .sidenav {
+		height: 100%;
+		width: 0;
+		position: fixed;
+		z-index: 1;
+		top: 0;
+		right: 0;
+		color: #f1f1f1;
+		background-color: #111;
+		overflow-x: hidden;
+		transition: 0.5s;
+		padding-top: 60px;
+		padding-left: 5px;
+	  }
+
+	.sidenav a {
+		padding: 8px 8px 8px 32px;
+		text-decoration: none;
+		font-size: 25px;
+		color: #818181;
+		display: block;
+		transition: 0.3s;
+	}
+
+	.sidenav h1{
+		color: #FFFAFF;
+	}
+
+	.sidenav a:hover {
+		color: #f1f1f1;
+	}
+
+	.sidenav .closebtn {
+		position: absolute;
+		top: 0;
+		right: 25px;
+		font-size: 36px;
+		margin-left: 50px;
+	}
+	
+	.header .closebtn {
+		text-decoration: none;
+		color: #818181;
+		position: absolute;
+		top: 0;
+		right: 25px;
+		font-size: 36px;
+		margin-left: 50px;
+	}
+	
+	.header a:hover {
+		color: #f1f1f1;
+	}
+	
+	.sources{
+		color: #818181;
+		text-decoration: none;
+		text-align: right;
+		font-size: 14px;
+	}
+	
+	.sources a:hover{
+		color:  #f1f1f1;
+	}
+	
+	.legend {
+		margin: auto;
+		width: 1500px;
+	}
+	
+	.slider {
+		margin: auto;
+		width: 1175px;
+		height: 110px;
+	}
+	
+	.sliderYears{
+		float: right;
+		width: 1000px;
+	}
+	
+	.selectSliderYear{
+		float: left;
+		align: left;
+		width: 120px;
+		height: 100px;
+	}
+	
+	#currentSliderYears {
+		width: 100px;
+	}
+	
+	#tooltip {
+		z-index: 1;
+		position: absolute;
+		width: 200px;
+		height: auto;
+		padding: 10px;
+		background-color: white;
+		-webkit-border-radius: 10px;
+		-moz-border-radius: 10px;
+		border-radius: 10px;
+		-webkit-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+		-moz-box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+		box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.4);
+		pointer-events: none;
+	}
+	
+	#tooltip.hidden {
+		display: none;
+	}
+	
+	#tooltip p {
+		margin: 0;
+		font-family: sans-serif;
+		font-size: 16px;
+		line-height: 20px;
+		color: #000305;
+	}
+	
+	.labelGraph{
+		color: #000305;
+	}
+	
+	#graphOne{
+		padding-top: 50px;
+	}
+	
+	.graph {
+		padding-left: 15px;
+		color: #f1f1f1;
+	}
+	
+	.hr {
+		opacity: 0.5;
+	}
+
+	.key-dot {
+		display: inline-block;
+		height: 15px;
+		margin-right: .5em;
+		width: 15px;
+	}
+	/*["#9EE9F7","#60D3F7", "#2C9DB8", "#107699", "#0D607D", "#094154"];*/
+	.colorMap0 { background: #9EE9F7;}
+	.colorMap1 { background: #60D3F7;}
+	.colorMap2 { background: #2C9DB8;}
+	.colorMap3 { background: #107699;}
+	.colorMap4 { background: #0D607D;}
+	.colorMap5 { background: #094154;}
+	
+	.legendLeft{
+		float: left; 
+		width: 100px;
+	}
+	.legendRight{
+		float: left;
+		width: 100px;
+	}
+	
+	ul {
+		list-style-type: none;
+		margin: 0;
+		padding: 0;
+	}
+
+	li{
+		display: inline;
+	}
+
+	li p {
+		display: inline;
+		color: #f1f1f1;
+		font-size: 18px;
+		padding-left: 50px;
+		text-decoration: none;
+	}
+
+	li p:hover {
+		font-weight: bold;
+	}
+	
+	#divGraphTwo {
+		float: left;
+		width: 350px;
+		color: #f1f1f1;
+	}
+	
+	.value-text{
+		color: #FFF5FE;
+	}
+	
+	/*["#9EE9F7","#60D3F7", "#2C9DB8", "#107699", "#0D607D", "#094154"];*/
+	#divMedal {
+		padding-left: 20px;
+		float: right;
+		background-color: white; /*#9EE9F7*/
+		color: #111;
+		width: 440px;
+		height: 450px;
+		
+	}
+	
+	#divMedal h1{
+		color: #111;
+		text-align: left;
+	}
+	
+	.custom-select {
+		position: relative;
+	}
+	
+	.custom-select label{
+		color: #f1f1f1;
+		font-size: 20px;
+		padding-right: 20px;
+	}
+	
+	.custom-select select{
+		background-color: white;
+		color: #111;
+		width: 150px;
+		height: 30px;
+		font-size: 18px;
+		border: 1px solid transparent;
+	}
+	
+	@media screen and (max-height: 450px) {
+		.sidenav {padding-top: 15px;}
+		.sidenav a {font-size: 18px;}
+	}
+	
+    </style>
+  </head>
+
+  <body>
+    <div id="top">
+	<div class="header" id="header">
+		<h1>Participation of the Winter Olympics</h1>
+		<p>The world map below shows the participation of the winter Olympics from 1924 till 2014. Feel free to use the slidebar below the worldmap to change the year. This map has been made using d3.js.</p>
+		<p>There are a few faults in the the winter Olympics dataset, these have been caused due to the change of ISO number.</p>
+		<p class="sources">Sources: <a href="https://www.kaggle.com/heesoo37/120-years-of-olympic-history-athletes-and-results/home">Data Olympics</a> - <a href="https://d3js.org/">d3.js</a> - <a href="https://medium.com/@andybarefoot/making-a-map-using-d3-js-8aa3637304ee"> tutorial map</a></p>
+		<a href="javascript:void(0)" class="closebtn" onclick="closeHeader()">X</a>
+	</div>
+	<div id="map-holder">
+	</div>
+	<div id="sideNavBar" class="sidenav">
+		<div class="headernav">
+			<h1 id="countryName">text</h1><a id="countryContinent"></a><a href="javascript:void(0)" class="closebtn" onclick="closeNav()">X</a>
+			<p></p>
+		</div>
+		<div class="graph">
+		<div id="divGraphOne">	
+			<hr class="hr">
+			<h2 id="graphTitle">Participation in the winter Olympics.</h2>
+			<div id="tooltip" class="hidden">
+				<p><strong>Sport: </strong><span id="sport"></span><p>
+				<p><strong>Value: </strong><span id="value"></span></p>
+			</div>
+			<div id="graphOneInfo" class="custom-select">
+			<label for="cbYear">Select year</label>
+			<select id="cbYear"  onchange="changeYear()">
+			</select>
+			</div>
+			<svg class="graph" id="graphOne" width='900' height='300'>
+			</svg
+		</div>
+		<br>
+		<hr class="hr">
+		<div id="divGraphTwo">	
+			<svg class="graph" id="graphTwo" width='350' height='75'>
+			</svg>
+		</div>
+		<div id="divMedal">
+			
+			<table style="width:100%">
+				<tr>
+					<th><h1>Medals:</h1></th>
+					<th><h1>Amount</h1></th> 
+				</tr>
+				<tr>
+					<td><h3>Gold</h3></td>
+					<td><h3 id="medalGold">0</h3></td> 
+				</tr>
+				<tr>
+					<td><h3>Zilver</h3></td>
+					<td><h3 id="medalSilver">0</h3></td> 
+				</tr>
+				<tr>
+					<td><h3>Bronze</h3></td>
+					<td><h3 id="medalBronze">0</h3></td> 
+				</tr>
+			</table>
+		</div>
+		</div>
+		
+	</div>
+	</div>
+	<div id="down">
+		<div class="legend">
+			<ul>
+				<li><p class="country-name"><span class="key-dot colorMap0"></span>Value 0, didnt participate</p></li>
+				<li><p class="country-name"><span class="key-dot colorMap1"></span>Values between 1 and 5</p></li>
+				<li><p class="country-name"><span class="key-dot colorMap2"></span>Values between 5 and 10</p></li>
+				<li><p class="country-name"><span class="key-dot colorMap3"></span>Values between 10 and 15</p></li>
+				<li><p class="country-name"><span class="key-dot colorMap4"></span>Values between 15 and 25</p></li>
+				<li><p class="country-name"><span class="key-dot colorMap5"></span>Values 25 or higher</p></li>
+			</ul>
+		</div>
+		<div class="slider">
+			
+			<div class="selectSliderYear">
+				<h2 id="currentSliderYears">2000</h2>
+			</div>
+			<div id="sliderYears">
+			</div>
+		</div>
+		
+	</div>
+    <script type="text/javascript">
+		// DEFINE VARIABLES
+		// Define size of map group
+		// Full world map is 2:1 ratio
+		// Using 12:5 because we will crop top and bottom of map
+		w = 3000;
+		h = 1250;
+		var widthNavbar = "900px";
+		// variables for catching min and max zoom factors
+		var minZoom;
+		var maxZoom;
+		// variables for managing data
+		var allCountry;
+		var selectedFile = "winterD3.csv";
+		var selectedISO = "";
+		var selectedCountry = "";
+		var dropYear = d3.select("#cbYear").property('value', '2000'); 
+		var selectedYear = 2000;
+		var optionSport = [];
+		//DEFINE variables for legend
+		var dataLegend = [{label: "lbl1"}, {label: "lbl2"},{label: "lbl3"},{label: "lbl4"},{label: "lbl5"},{label: "lbl6"},]
+		var legendRectSize = 18;
+		var legendSpacing = 4;
+      // DEFINE FUNCTIONS/OBJECTS
+      // Define map projection
+      var projection = d3
+        .geoEquirectangular()
+        .center([0, 15]) // set centre to further North as we are cropping more off bottom of map
+        .scale([w / (2 * Math.PI)]) // scale to fit group width
+        .translate([w / 2, h / 2]) // ensure centred in group
+      ;
+	  
+	var colorArray = [
+		"#39E5A3", "#3EB286", "#39DFE5", "#3EAEB2", "#39B4E5", "#3E91B2", "#3992E5", "#0C58FC", "#3960E5", "#3E7AB2", "#3E63B2", "#3959E5", "#3E4DB2", "#6739E5", "#5D3EB2", "#7539E5", "#673EB2", "#E5E539", "#B2B23E", 
+		"#E5C039", "#B2993E", "#E5A039", "#E5A039", "#FC7C0C", "#E58939", "#FC680C", "#E57B39", "#FC540C", "#E56D39", "#FC540C", "#E55B39", "#FC3C0C", "#FC0C0C", "#E53939", "#FC0C60", "#E53975", "#FC0C84", "#E5398F", 
+		"#FF5959", "#FF3232", "#FF6532", "#FF8259", "#FFB232", "#FFC059", "#E5FF32", "#FFC059", "#E5FF32", "#EAFF32", "#7FFF32", "#97FF59", "#32FF32", "59FF59"];
+	
+		function changeYear(){
+			selectedYear =$("#cbYear option:selected").text();
+			getDataCountry(selectedISO, false);
+		}
+	
+		function getDataYear(selectYear){
+			console.log(selectYear);
+			var result = [];
+			d3.csv(selectedFile, function(data) {
+			
+			selectedYear = selectYear;
+			var countries = d3.nest()
+				.key(function(d) {return d.Year})
+				.key(function(d) {return d.NOC})
+				.key(function(d) {return d.Sport})
+				.entries(data);
+			
+			var filtered = countries.filter(function(d) {return d.key == selectYear}); 
+			
+			if(filtered.length == 0){
+				createMap(result);
+			}else{
+				filtered = filtered[0].values;
+				filtered.forEach(function(d){
+					result.push({year: selectYear, iso: d.key, country: "country" + d.key, value: d.values.length});
+				})
+				createMap(result);
+			}})
+			return result;
+		};
+	
+      // Define map path
+      var path = d3
+        .geoPath()
+        .projection(projection)
+      ;
+
+      // Create function to apply zoom to countriesGroup
+      function zoomed() {
+        t = d3
+          .event
+          .transform
+        ;
+        countriesGroup
+          .attr("transform","translate(" + [t.x, t.y] + ")scale(" + t.k + ")")
+        ;
+      }
+
+      // Define map zoom behaviour
+      var zoom = d3
+        .zoom()
+        .on("zoom", zoomed)
+      ;
+
+      function getTextBox(selection) {
+        selection
+          .each(function(d) {
+            d.bbox = this
+              .getBBox();
+            })
+        ;
+      }
+
+      // Function that calculates zoom/pan limits and sets zoom to default value 
+      function initiateZoom() {
+        // Define a "minzoom" whereby the "Countries" is as small possible without leaving white space at top/bottom or sides
+        minZoom = Math.max($("#map-holder").width() / w, $("#map-holder").height() / h);
+        // set max zoom to a suitable factor of this value
+        maxZoom = 20 * minZoom;
+        // set extent of zoom to chosen values
+        // set translate extent so that panning can't cause map to move out of viewport
+        zoom
+          .scaleExtent([minZoom, maxZoom])
+          .translateExtent([[0, 0], [w, h]])
+        ;
+        // define X and Y offset for centre of map to be shown in centre of holder
+        midX = ($("#map-holder").width() - minZoom * w) / 2;
+        midY = ($("#map-holder").height() - minZoom * h) / 2;
+        // change zoom transform to min zoom and centre offsets
+        svg.call(zoom.transform, d3.zoomIdentity.translate(midX, midY).scale(minZoom));
+      }
+
+      // zoom to show a bounding box, with optional additional padding as percentage of box size
+      function boxZoom(box, centroid, paddingPerc) {
+        minXY = box[0];
+        maxXY = box[1];
+        // find size of map area defined
+        zoomWidth = Math.abs(minXY[0] - maxXY[0]);
+        zoomHeight = Math.abs(minXY[1] - maxXY[1]);
+        // find midpoint of map area defined
+        zoomMidX = centroid[0];
+        zoomMidY = centroid[1];
+        // increase map area to include padding
+        zoomWidth = zoomWidth * (1 + paddingPerc / 100);
+        zoomHeight = zoomHeight * (1 + paddingPerc / 100);
+        // find scale required for area to fill svg
+        maxXscale = $("svg").width() / zoomWidth;
+        maxYscale = $("svg").height() / zoomHeight;
+        zoomScale = Math.min(maxXscale, maxYscale);
+        // handle some edge cases
+        // limit to max zoom (handles tiny countries)
+        zoomScale = Math.min(zoomScale, maxZoom);
+        // limit to min zoom (handles large countries and countries that span the date line)
+        zoomScale = Math.max(zoomScale, minZoom);
+        // Find screen pixel equivalent once scaled
+        offsetX = zoomScale * zoomMidX;
+        offsetY = zoomScale * zoomMidY;
+        // Find offset to centre, making sure no gap at left or top of holder
+        dleft = Math.min(0, $("svg").width() / 2 - offsetX);
+        dtop = Math.min(0, $("svg").height() / 2 - offsetY);
+        // Make sure no gap at bottom or right of holder
+        dleft = Math.max($("svg").width() - w * zoomScale, dleft);
+        dtop = Math.max($("svg").height() - h * zoomScale, dtop);
+        // set zoom
+        svg
+          .transition()
+          .duration(350)
+          .call(
+            zoom.transform,
+            d3.zoomIdentity.translate(dleft, dtop).scale(zoomScale)
+          );
+      }
+
+      // on window resize
+      $(window).resize(function() {
+        // Resize SVG
+        svg
+          .attr("width", $("#map-holder").width())
+          .attr("height", $("#map-holder").height())
+        ;
+        initiateZoom();
+      });
+
+      // create an SVG
+      var svg = d3
+        .select("#map-holder")
+        .append("svg")
+        // set to the same size as the "map-holder" div
+        .attr("width", $("#map-holder").width())
+        .attr("height", $("#map-holder").height())
+        // add zoom functionality
+        .call(zoom)
+      ;
+		var $jqCountry = $('#countryName');
+		var graphOne = d3.select("#graphOne"),
+			margin = {top: 20, right: 20, bottom: 20, left: 20},
+			width = +graphOne.attr("width") - margin.left - margin.right,
+			height = +graphOne.attr("height") - margin.top - margin.bottom,
+			g = graphOne.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+		
+		var xScale = d3.scaleBand().rangeRound([0, width]).paddingInner(0.05).align(0.1);
+		var yScale = d3.scaleLinear().rangeRound([height, 0]);
+		var z = d3.scaleOrdinal().range(["#98abc5", "#8a89a6", "#7b6888", "#6b486b", "#a05d56", "#d0743c", "#ff8c00"]);
+
+		function updateYearCombobox(data){	
+			d3.select("#cbYear").html("");
+			dropYear.selectAll("option")
+					.data(data)
+					.enter()
+					.append("option")
+					.attr("value", function(d) {return d.key;})
+					.text(function(d){return d.key; });
+			selectedYear =$("#cbYear option:selected").text();
+		}
+		
+		function getDataCountry(iso, updateYear){
+			d3.csv(selectedFile, function(data) {
+			selectedISO = iso;
+			var countries = d3.nest()
+				.key(function(d) {return d.NOC})
+				.key(function(d) {return d.Year})
+				.sortKeys(d3.ascending).key(function(d){ return d.Year; })
+				.key(function(d) {return d.Sport})
+				.entries(data);
+			
+			var filtered = countries.filter(function(d) {return d.key == iso}); 
+
+			if(filtered.length == 0){
+				d3.select(".graph").style("opacity", 0);
+			}else{
+				d3.select(".graph").style("opacity", 1);
+				filtered = filtered[0].values;
+				
+				if(updateYear){
+					updateYearCombobox(filtered);
+				};
+
+				filtered = filtered.filter(function(d) {return d.key == selectedYear;});		
+				filtered = filtered[0].values;
+				graph = d3.select("#graphOne");
+				var medals = [];
+				var categories = [];
+				var result = [];
+				filtered.forEach(function(d){	
+					categories.push(d.key);
+					d.values.forEach(function(dd){
+						result.push({year: d.key, sport: dd.key, value: dd.values.length});
+						dd.values.forEach(function(ddd){
+							if (ddd.Medal != "") {medals.push({ýear: d.key, sport: dd.key, value: ddd.Medal, event: ddd.Event, name: ddd.Name});}
+						});
+					});
+				});
+				
+				createPieChart(result);
+				updateChart(result, categories);	
+				updateMedal(medals);
+			}
+		})};
+		
+		
+		function updateMedal(data){	
+			if(data.length > 0){
+				d3.select("#medalBronze").text(data.filter(function(d) {return d.value == "Bronze";}).length);
+				d3.select("#medalSilver").text(data.filter(function(d) {return d.value == "Silver";}).length);
+				d3.select("#medalGold").text(data.filter(function(d) {return d.value == "Silver";}).length);
+			}
+		}
+		
+		//var tooltip = d3.select("#graphOne").append("div").attr("class", "tooltip");
+		function createPieChart(data){
+			d3.selectAll("graphTwo").remove();
+			
+			var color = d3.scaleOrdinal(d3.schemeCategory20);
+			var colorScale = d3.scaleOrdinal().range(colorArray);
+			var width = 245;
+			var height = 245;
+			var radius = Math.min(width, height) / 2;
+			
+			var graphTwo = d3.select("#graphTwo")
+				.attr("class", "pie")
+				.attr("width", width)
+				.attr("height", height);
+			
+			var g = graphTwo.append("g")
+				.attr("transform", "translate(" + (width/2) + "," + (height/2) + ")");
+			
+			var arc = d3.arc()
+				.innerRadius(radius - 40)
+				.outerRadius(radius);
+			
+			var text = "";
+			
+			var pie = d3.pie()
+				.value(function(d) {return d.value; })
+				.sort(null);
+			
+			var path = g.selectAll("path")
+				.data(pie(data))
+				.enter()
+				.append("g")
+				.on("mouseover", function(d) {
+					let g = d3.select(this)
+						.style("cursor", "pointer")
+						.style("fill", "f1f1f1")
+						.append("g")
+						.attr("class", "text-group");
+					
+					g.append("text")
+						.attr("class", "name-text")
+						.text(d.data.sport)
+						.attr("text-anchor", "middle")
+						.attr("dy", "-1.2em")
+						.style("color", "#FBEBFF");
+					
+					g.append("text")
+						.attr("class", "value-text")
+						.style("color", "#FFF5FE")
+						.text(d.value)
+						.attr("text-anchor", "middle")
+						.attr("dy", ".6em");
+				})
+				.on("mouseout", function(d){
+					d3.select(this)
+						.style("cursor", "none")
+						.style("fill", colorScale(this._current))
+						.select(".text-group").remove();
+				})
+				.append("path")
+				.attr("d", arc)
+				.attr("fill", (d, i) => colorScale(i))
+				.on("mouseover", function(d) {
+					d3.select(this)
+						.style("cursor", "pointer")
+						.style("opacity", 1);  //lower opacity to 0.5 
+					})
+				.on("mouseout", function(d) {
+					d3.select(this)
+						.style("cursor", "none")
+						.style("fill", colorScale(this._current))
+						.style("opacity", 1);
+					})
+				.each(function(d, i) {this._current = i; });
+				
+			g.append("text")
+				.attr("text-anchor", "middle")
+				.attr("dy", ".35em")
+				.text(text);
+				
+			graphTwo.attr("transform", "translate(" + width / 2 + "," + height / 2 + ")");
+			var key = function(d){return d.key; };
+		}
+		
+		function arcTween(a) {
+			var i = d3.interpolate(this._current, a);
+			this._current = i(0);
+			return function(t) {
+			return arc(i(t));
+			};
+		}
+
+		function labelarcTween(a) {
+			var i = d3.interpolate(this._current, a);
+			this._current = i(0);
+			return function(t) {
+			return "translate(" + labelArc.centroid(i(t)) + ")";
+			};
+		
+		}
+		const transitionSpeed = 500;
+		
+		function updateChart(data, categories){
+			var width = 850;
+			var height = 250;
+			
+			//set y-axis
+			graphOne.select(".y").remove();
+			var colorScale = d3.scaleOrdinal().range(colorArray);
+			//var color = d3.scaleOrdinal(d3.schemeCategory20);
+			const yScale = d3.scaleLinear()
+				.range([height, 0]);
+			yScale.domain([0, d3.max(data, function(d) {return d.value;}) ]);
+			const yAxis = d3.axisRight(yScale);
+			
+			graphOne.append("g")
+				.attr("class", "y axis")
+				.style("stroke-width", ".5px")
+				.style("stroke", "#E5E5E4")
+				.style("text", "#E5E5E4")
+				.style("font-size", "10px")
+				.style("font-style", "normal")
+				.style("font-family", "Abril")
+				.call(yAxis);
+
+			//set x-axis
+			graphOne.select(".x").remove();
+			const xScale = d3.scaleBand()
+				.range([0, width])
+				.domain(data.map((s) => s.sport))
+				.padding(0.5)
+			const xAxis = d3.axisBottom(xScale)
+				.scale(xScale);
+			
+			graphOne.append('g')
+				.attr("class", "x axis")
+				.attr('transform', `translate(0, ${height})`)
+				.style("stroke-width", ".5px")
+				.style("stroke", "#E5E5E4")
+				.style("text", "#E5E5E4")
+				.style("font-size", "10px")
+				.style("font-style", "normal")
+				.style("font-family", "Abril")
+				.call(xAxis);
+			
+			/*graphOne.append("text")
+				.attr("class", "labelGraph")
+				.attr("x", width / 2)
+				.attr("y", height + 40)
+				.attr("text-anchor", "middle")
+				.text("Names of the sport")
+				.style("color", "#E5E5E4")
+				.style("font-size", "24px")*/
+			
+			var bar = graphOne.selectAll(".bar")
+				.remove()
+				.exit()
+				.data(data, function(d) {return d.sport;});
+
+			bar.enter().append("rect")
+				.attr("class", "bar")
+				.attr("x", function(d) {return xScale(d.sport);})
+				.attr("y", function(d) {return yScale(d.value);})
+				.attr("height", function(d) {return height - yScale(d.value); })
+				.attr("width", xScale.bandwidth())
+				.style("fill", (d, i) => colorScale(i))
+				.on("mouseover", function(d){
+					d3.select(this)
+						.transition(5) 
+						.duration(300)
+						.style("cursor", "pointer")
+						.style("opacity", .3);  //lower opacity to 0.5 
+
+					var xPosition = parseFloat(d3.mouse(this)[0]) - 80;
+					var yPosition = parseFloat(d3.mouse(this)[1]) + 190;
+					d3.select("#tooltip")
+						.style("left", xPosition + "px")
+						.style("top", yPosition + "px")						
+						.select("#value")
+						.text(d.value);
+		  
+					d3.select("#tooltip")
+						.style("left", xPosition + "px")
+						.style("top", yPosition + "px")						
+						.select("#sport")
+						.text(d.sport); 
+					d3.select("#tooltip").classed("hidden", false);
+				
+				})
+				.on("mouseout", function(d){
+					d3.select("#tooltip").classed("hidden", true);
+					d3.select(this)
+						.transition(5)
+						.duration(300)
+						.style("fill", colorScale(this._current))
+						.style("opacity", 1);  //lower opacity to 0.5 
+				})
+				.each(function(d, i) {this._current = i; });
+			
+			bar.exit().remove();
+			
+			//transitions 
+			bar	
+				.transition().duration(transitionSpeed)
+					.attr("y", function(d) {return yScale(d.value); })
+					.attr("height", function(d) {return height - yScale(d.value);});
+			
+			graphOne.select(".x")
+				.transition().duration(transitionSpeed)
+					.call(xAxis);
+			
+			graphOne.select(".y")
+				.transition().duration(transitionSpeed)
+					.call(yAxis);
+					
+		}
+		
+		function openNav(worldName, iso, continent, economy){
+			updateNav(worldName, continent, economy);
+			getDataCountry(iso, true);
+			document.getElementById("sideNavBar").style.width = widthNavbar;
+		}
+		
+		//update information about country
+		function updateNav(worldName, continent, economy){
+			//$jqCountry.html(worldName);
+			d3.select("#countryName").text(worldName);
+			d3.select("#countryContinent").text(continent);
+		}
+		
+		function closeHeader(){
+			document.getElementById("header").style.display = "none";
+		}
+		
+		function closeNav(){
+			document.getElementById("sideNavBar").style.width = "0px";
+		}
+
+	  var firstYear = 1924;
+	  var allYears = [];
+	d3.csv(selectedFile, function(data) {
+		var stepSize = 2;
+		var countries = d3.nest()
+			.key(function(d) {return d.Year})
+			.sortKeys(d3.ascending).key(function(d){ return d.Year; })
+			.rollup(function(d) {return d.length;})
+			.entries(data);
+			
+		countries.forEach(function(d){
+			allYears.push(Number(d.key));
+		});
+		
+		var sliderYears = d3.sliderHorizontal()
+			.min(d3.min(allYears))
+			.max(d3.max(allYears))
+			.width(1000)
+			.step(stepSize)
+			.on('onchange', val => {
+				d3.select("p#value1").text(val);
+				d3.select("#currentSliderYears").text(val);
+				selectedYear = val;
+				getDataYear(val);
+			});
+		d3.select("#currentSliderYears").text(allYears[0]);
+		
+		 var group1 = d3.select("div#sliderYears").append("svg")
+			.attr("width", 1050)
+			.attr("height", 100)
+			.style("float", "right")
+			.append("g")
+			.attr("transform", "translate(30,30)");	
+		group1.call(sliderYears);
+
+		d3.select("p#value1").text(sliderYears.value())
+		d3.select("a#setValue1").on("click", () => { sliderYears.value(); d3.event.preventDefault(); d3.select("#currentSliderYears").text(sliderYears.value()); });
+	});
+	
+	var mapColor = ["#9EE9F7","#60D3F7", "#2C9DB8", "#107699", "#0D607D", "#094154"];
+      // get map data
+     function createMap(result){ 
+	  d3.json(
+        "https://raw.githubusercontent.com/andybarefoot/andybarefoot-www/master/maps/mapdata/custom50.json",
+		function(json) {
+          //Bind data and create one path per GeoJSON feature
+          countriesGroup = svg.append("g").attr("id", "map");
+          // add a background rectangle
+          countriesGroup
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", 0)
+            .attr("width", w)
+            .attr("height", h);
+
+          // draw a path for each feature/country
+          countries = countriesGroup
+            .selectAll("path")
+            .data(json.features)
+            .enter()
+            .append("path")
+            .attr("d", path)
+            .attr("id", function(d, i) {
+              return "country" + d.properties.iso_a3;
+            })
+            .attr("class", "country")
+			.attr("fill", function(d, i){
+				var color = mapColor[0];
+				  result.forEach(function(dd){
+						if (dd.iso == d.properties.iso_a3){
+							if(dd.value < 5){ color = mapColor[1];
+							}else if(dd.value < 10 && dd.value > 5){ color = mapColor[2];
+							}else if(dd.value < 15 && dd.value > 10){ color = mapColor[3];
+							}else if(dd.value < 25 && dd.value > 15){ color = mapColor[4];
+							}else{ color = mapColor[5];
+							}							
+						}
+					});
+				return color;
+			})
+            // add a mouseover action to show name label for feature/country
+            .on("mouseover", function(d, i) {
+                d3.select("#countryLabel" + d.properties.iso_a3).style("display", "block");
+            })
+            .on("mouseout", function(d, i) {
+                d3.select("#countryLabel" + d.properties.iso_a3).style("display", "none");
+            })
+            // add an onclick action to zoom into clicked country
+            .on("click", function(d, i) {
+                d3.selectAll(".country").classed("country-on", false);
+                d3.select(this).classed("country-on", true);
+				openNav(d.properties.name, d.properties.adm0_a3, d.properties.subregion, d.properties.economy);
+				console.log(d.properties.name + ' ' + d.properties.adm0_a3);
+            boxZoom(path.bounds(d), path.centroid(d), 20);
+            });
+          initiateZoom();
+        }
+      );}
+	  
+	 getDataYear(1924);
+    </script>
+  </body>
+</html>
